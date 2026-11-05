@@ -17,7 +17,10 @@ import { OfflineSyncService } from '../../../core/services/offline-sync.service'
 import { ConnectivityService } from '../../../core/services/connectivity.service';
 import { ServicioTerreno, etiquetaServicio } from '../../../core/models/terreno.model';
 import type { RegistroLocal } from '../../../core/models/offline-registro.model';
-import { subcarpetaBlobParaRegistro } from '../../../core/utils/terreno-paths';
+import {
+  normalizarCarpetaBlobStorage,
+  subcarpetaBlobParaRegistro,
+} from '../../../core/utils/terreno-paths';
 import { mensajeErrorHttp } from '../../../core/utils/http-error';
 import { materializarBlob } from '../../../core/utils/foto-blob';
 
@@ -62,6 +65,9 @@ export class FormularioPage implements OnInit {
   readonly servicioPreseleccionado = signal<ServicioTerreno | null>(null);
   readonly online = this.connectivity.online;
   readonly localId = signal<string | null>(null);
+  readonly serverId = signal<number | null>(null);
+  readonly titulo = signal('Nuevo registro');
+  readonly eliminando = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     nombreTerreno: ['', [Validators.required, Validators.maxLength(120)]],
@@ -121,10 +127,14 @@ export class FormularioPage implements OnInit {
   private async cargarBorrador(localId: string): Promise<void> {
     const reg = await this.store.obtenerRegistro(localId);
     if (!reg) {
-      this.snack.open('No se encontró el borrador local.', 'Cerrar', { duration: 3500 });
+      this.snack.open('No se encontró el registro local.', 'Cerrar', { duration: 3500 });
       return;
     }
     this.localId.set(localId);
+    this.serverId.set(reg.serverId && reg.serverId > 0 ? reg.serverId : null);
+    this.titulo.set(
+      this.serverId() ? 'Editar levantamiento' : 'Editar borrador',
+    );
     this.form.patchValue({
       nombreTerreno: reg.nombreTerreno,
       descripcion: reg.descripcion,
@@ -162,7 +172,28 @@ export class FormularioPage implements OnInit {
   }
 
   volver(): void {
-    void this.router.navigateByUrl('/terreno');
+    const sid = this.serverId();
+    if (sid) {
+      void this.router.navigate(['/terreno/registros', sid]);
+      return;
+    }
+    void this.router.navigateByUrl('/terreno/registros');
+  }
+
+  async eliminarBorrador(): Promise<void> {
+    const id = this.localId();
+    if (!id || this.serverId()) return;
+    if (!confirm('¿Eliminar este borrador y sus fotos del teléfono?')) return;
+    this.eliminando.set(true);
+    try {
+      await this.store.eliminarRegistro(id);
+      this.snack.open('Borrador eliminado.', 'Cerrar', { duration: 3000 });
+      void this.router.navigateByUrl('/terreno/registros');
+    } catch (err) {
+      this.snack.open(mensajeErrorHttp(err, 'No se pudo eliminar.'), 'Cerrar', { duration: 4000 });
+    } finally {
+      this.eliminando.set(false);
+    }
   }
 
   async guardarBorrador(): Promise<void> {
@@ -259,10 +290,15 @@ export class FormularioPage implements OnInit {
 
     const servicioId = v.servicioEcoingenId > 0 ? v.servicioEcoingenId : null;
     const servicio = this.servicios().find((s) => s.id === servicioId) ?? null;
-    const carpeta = subcarpetaBlobParaRegistro(v.nombreTerreno, servicioId);
     const ahora = new Date().toISOString();
     const id = this.localId() ?? this.store.nuevoLocalId();
     const existente = await this.store.obtenerRegistro(id);
+
+    // Si ya está en servidor, conservar carpeta Blob (como Flutter) aunque cambie el nombre.
+    const carpeta =
+      existente?.serverId && existente.blobStorage
+        ? normalizarCarpetaBlobStorage(existente.blobStorage, v.nombreTerreno.trim())
+        : subcarpetaBlobParaRegistro(v.nombreTerreno, servicioId);
 
     const registro: RegistroLocal = {
       localId: id,
@@ -272,9 +308,9 @@ export class FormularioPage implements OnInit {
       observacion: v.observacion.trim(),
       blobStorage: carpeta,
       servicioId,
-      servicioEtiqueta: servicio ? etiquetaServicio(servicio) : '',
+      servicioEtiqueta: servicio ? etiquetaServicio(servicio) : existente?.servicioEtiqueta || '',
       estadoSync: estado,
-      serverId: existente?.serverId ?? null,
+      serverId: existente?.serverId ?? this.serverId(),
       ultimoError: null,
       fotosEsperadas: this.fotos().length,
       fechaCreacion: existente?.fechaCreacion ?? ahora,

@@ -43,13 +43,14 @@
           <div class="card-main">
             <strong>{{ r.nombreTerreno }}</strong>
             <span>{{ r.descripcion || 'Sin tipo' }} · {{ etiquetaEstado(r.estadoSync) }}</span>
+            <span class="hint-edit">Toca para editar</span>
             @if (r.ultimoError) {
               <span class="err">{{ r.ultimoError }}</span>
             }
           </div>
           <div class="card-meta">
             <span>{{ r.fechaModificacion | date: 'dd/MM/yyyy HH:mm' }}</span>
-            <mat-icon>chevron_right</mat-icon>
+            <mat-icon>edit</mat-icon>
           </div>
         </button>
       }

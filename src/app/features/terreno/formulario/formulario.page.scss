@@ -25,6 +25,18 @@
   font-size: 0.86rem;
 }
 
+.edit-banner {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -138,4 +150,10 @@
   mat-spinner {
     margin-right: 0.35rem;
   }
+}
+
+.btn-eliminar {
+  width: 100%;
+  height: 44px;
+  margin-top: 0.25rem;
 }

@@ -55,6 +55,52 @@ export class OfflineStoreService {
     return (await this.get<RegistroLocal>(db, STORE_REGISTROS, localId)) ?? null;
   }
 
+  async obtenerPorServerId(serverId: number, usuarioId: number): Promise<RegistroLocal | null> {
+    if (!serverId) return null;
+    const lista = await this.listarRegistrosUsuario(usuarioId);
+    return lista.find((r) => r.serverId === serverId) ?? null;
+  }
+
+  /**
+   * Igual que Flutter `prepararEdicion`: asegura una copia local editable
+   * (borrador/error o espejo de un registro ya enviado).
+   */
+  async prepararEdicionDesdeServidor(params: {
+    serverId: number;
+    usuarioId: number;
+    nombreTerreno: string;
+    descripcion: string;
+    observacion: string;
+    blobStorage: string;
+    servicioId?: number | null;
+    servicioEtiqueta?: string;
+    fechaCreacion?: string;
+  }): Promise<string> {
+    const existente = await this.obtenerPorServerId(params.serverId, params.usuarioId);
+    if (existente) return existente.localId;
+
+    const ahora = new Date().toISOString();
+    const localId = this.nuevoLocalId();
+    const registro: RegistroLocal = {
+      localId,
+      usuarioId: params.usuarioId,
+      nombreTerreno: params.nombreTerreno,
+      descripcion: params.descripcion,
+      observacion: params.observacion,
+      blobStorage: params.blobStorage,
+      servicioId: params.servicioId ?? null,
+      servicioEtiqueta: params.servicioEtiqueta ?? '',
+      estadoSync: 'sincronizado',
+      serverId: params.serverId,
+      ultimoError: null,
+      fotosEsperadas: 0,
+      fechaCreacion: params.fechaCreacion || ahora,
+      fechaModificacion: ahora,
+    };
+    await this.guardarRegistro(registro);
+    return localId;
+  }
+
   async listarRegistrosUsuario(usuarioId: number): Promise<RegistroLocal[]> {
     const db = await this.db();
     const todos = await this.getAll<RegistroLocal>(db, STORE_REGISTROS);

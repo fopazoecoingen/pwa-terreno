@@ -1,9 +1,26 @@
 <mat-toolbar class="topbar eco-topbar">
-  <button mat-icon-button type="button" (click)="volver()"><mat-icon>arrow_back</mat-icon></button>
+  <button mat-icon-button type="button" (click)="volver()" aria-label="Volver">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
   <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
   <span>Detalle</span>
   <span class="spacer"></span>
   @if (registro(); as r) {
+    @if (puedeEditar()) {
+      <button
+        mat-icon-button
+        type="button"
+        (click)="editar()"
+        [disabled]="preparandoEdicion()"
+        aria-label="Editar levantamiento"
+      >
+        @if (preparandoEdicion()) {
+          <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+          <mat-icon>edit</mat-icon>
+        }
+      </button>
+    }
     <button mat-icon-button type="button" (click)="descargarInforme()" aria-label="Informe PDF">
       <mat-icon>picture_as_pdf</mat-icon>
     </button>
@@ -24,6 +41,20 @@
         <p><strong>Servicio:</strong> {{ r.servicioEmpresa }} · {{ r.servicioSucursal }}</p>
       }
     </section>
+
+    @if (puedeEditar()) {
+      <button
+        mat-flat-button
+        color="primary"
+        class="btn-editar"
+        type="button"
+        (click)="editar()"
+        [disabled]="preparandoEdicion()"
+      >
+        <mat-icon>edit</mat-icon>
+        Editar levantamiento
+      </button>
+    }
 
     <section class="fotos">
       <h3>Fotos ({{ imagenes().length }})</h3>

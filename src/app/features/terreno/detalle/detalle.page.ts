@@ -9,7 +9,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize, switchMap } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { TerrenoApiService } from '../../../core/services/terreno-api.service';
-import { ImagenTerreno, RegistroTerreno } from '../../../core/models/terreno.model';
+import { OfflineStoreService } from '../../../core/services/offline-store.service';
+import { SessionService } from '../../../core/services/session.service';
+import { ImagenTerreno, RegistroTerreno, etiquetaServicio } from '../../../core/models/terreno.model';
+import { normalizarCarpetaBlobStorage } from '../../../core/utils/terreno-paths';
 import { mensajeErrorHttp } from '../../../core/utils/http-error';
 
 @Component({
@@ -28,11 +31,14 @@ import { mensajeErrorHttp } from '../../../core/utils/http-error';
 })
 export class DetallePage implements OnInit {
   private readonly api = inject(TerrenoApiService);
+  private readonly store = inject(OfflineStoreService);
+  private readonly session = inject(SessionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
 
   readonly cargando = signal(false);
+  readonly preparandoEdicion = signal(false);
   readonly registro = signal<RegistroTerreno | null>(null);
   readonly imagenes = signal<{ meta: ImagenTerreno; url: string }[]>([]);
 
@@ -52,7 +58,7 @@ export class DetallePage implements OnInit {
       .pipe(
         switchMap((reg) => {
           this.registro.set(reg);
-          const carpeta = (reg.blobStorage || '').trim();
+          const carpeta = normalizarCarpetaBlobStorage(reg.blobStorage, reg.nombreTerreno);
           if (!carpeta) return of([] as ImagenTerreno[]);
           return this.api.listarImagenes(carpeta);
         }),
@@ -87,6 +93,57 @@ export class DetallePage implements OnInit {
           if (pendientes <= 0) this.imagenes.set([...resultados]);
         },
       });
+    }
+  }
+
+  puedeEditar(): boolean {
+    const r = this.registro();
+    const uid = this.session.usuarioId();
+    if (!r || !uid) return false;
+    if (r.usuarioId > 0 && r.usuarioId !== uid) return false;
+    return true;
+  }
+
+  async editar(): Promise<void> {
+    const r = this.registro();
+    const uid = this.session.usuarioId();
+    if (!r || !uid) {
+      this.snack.open('Sesión inválida. Vuelve a iniciar sesión.', 'Cerrar', { duration: 4000 });
+      return;
+    }
+    if (r.usuarioId > 0 && r.usuarioId !== uid) {
+      this.snack.open('Este registro pertenece a otro usuario.', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    this.preparandoEdicion.set(true);
+    try {
+      const carpeta = normalizarCarpetaBlobStorage(r.blobStorage, r.nombreTerreno);
+      const localId = await this.store.prepararEdicionDesdeServidor({
+        serverId: r.id,
+        usuarioId: uid,
+        nombreTerreno: r.nombreTerreno,
+        descripcion: r.descripcion,
+        observacion: r.observacion,
+        blobStorage: carpeta,
+        servicioId: r.servicioEcoingenId,
+        servicioEtiqueta:
+          r.servicioEmpresa || r.servicioSucursal
+            ? etiquetaServicio({
+                id: r.servicioEcoingenId ?? 0,
+                empresa: r.servicioEmpresa || '',
+                sucursal: r.servicioSucursal || '',
+              })
+            : '',
+        fechaCreacion: r.fechaCreacionRegistro,
+      });
+      void this.router.navigate(['/terreno/nuevo'], { queryParams: { localId } });
+    } catch (err) {
+      this.snack.open(mensajeErrorHttp(err, 'No se pudo abrir la edición.'), 'Cerrar', {
+        duration: 5000,
+      });
+    } finally {
+      this.preparandoEdicion.set(false);
     }
   }
 

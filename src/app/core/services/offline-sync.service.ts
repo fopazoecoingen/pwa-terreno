@@ -74,24 +74,28 @@ export class OfflineSyncService {
     const fotos = await this.store.listarFotos(registro.localId);
     let working: RegistroLocal = { ...registro, ultimoError: null };
     let serverId = working.serverId && working.serverId > 0 ? working.serverId : null;
+    const yaExistiaEnServidor = !!serverId;
 
-    if (!serverId) {
-      serverId = await firstValueFrom(
-        this.api.crear({
-          nombreTerreno: working.nombreTerreno,
-          descripcion: working.descripcion,
-          observacion: working.observacion,
-          blobStorage: working.blobStorage,
-          usuarioId: working.usuarioId,
-          servicioEcoingenId: working.servicioId ?? 0,
-        }),
-      );
+    const payload = {
+      nombreTerreno: working.nombreTerreno,
+      descripcion: working.descripcion,
+      observacion: working.observacion,
+      blobStorage: working.blobStorage,
+      usuarioId: working.usuarioId,
+      servicioEcoingenId: working.servicioId ?? 0,
+    };
+
+    if (serverId) {
+      // Edición de un levantamiento ya enviado (como Flutter actualizarRegistro).
+      await firstValueFrom(this.api.actualizar({ ...payload, id: serverId }));
+    } else {
+      serverId = await firstValueFrom(this.api.crear(payload));
       working = {
         ...working,
         serverId,
         fechaModificacion: new Date().toISOString(),
       };
-      // Persistir Id de servidor YA: si fallan fotos, no se vuelve a crear el registro.
+      // Persistir Id YA: si fallan fotos, no se duplica el registro.
       await this.store.guardarRegistro(working);
     }
 
@@ -105,7 +109,6 @@ export class OfflineSyncService {
     let subidas = 0;
     try {
       for (const foto of fotosValidas) {
-        // Releer bytes frescos por si el Blob de IDB quedó “hueco” en Safari.
         const mime = foto.mimeType || foto.blob.type || 'image/jpeg';
         const buffer = await foto.blob.arrayBuffer();
         if (!buffer.byteLength) {
@@ -118,9 +121,15 @@ export class OfflineSyncService {
         subidas += 1;
       }
     } catch (err) {
+      const verbo = yaExistiaEnServidor ? 'actualizado' : 'creado';
       throw new Error(
-        `Registro #${serverId} creado, pero falló la subida de fotos (${subidas}/${fotosValidas.length}): ${mensajeErrorHttp(err, 'error de red o almacenamiento')}`,
+        `Registro #${serverId} ${verbo}, pero falló la subida de fotos (${subidas}/${fotosValidas.length}): ${mensajeErrorHttp(err, 'error de red o almacenamiento')}`,
       );
+    }
+
+    // Tras sync OK, liberar fotos locales pendientes (siguen en Blob del servidor).
+    if (fotosValidas.length > 0) {
+      await this.store.reemplazarFotos(working.localId, []);
     }
 
     await this.store.guardarRegistro({
@@ -128,7 +137,7 @@ export class OfflineSyncService {
       serverId,
       estadoSync: 'sincronizado',
       ultimoError: null,
-      fotosEsperadas: fotosValidas.length,
+      fotosEsperadas: 0,
       fechaModificacion: new Date().toISOString(),
     });
   }

@@ -43,6 +43,19 @@
   }
 }
 
+.btn-editar {
+  margin-top: 0.85rem;
+  width: 100%;
+  height: 46px;
+  font-weight: 700;
+  background: var(--eco-gradient) !important;
+  color: #fff !important;
+
+  mat-icon {
+    margin-right: 0.35rem;
+  }
+}
+
 .fotos {
   margin-top: 1.25rem;
 

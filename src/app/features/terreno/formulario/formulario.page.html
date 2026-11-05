@@ -1,7 +1,7 @@
 <mat-toolbar class="topbar eco-topbar">
   <button mat-icon-button type="button" (click)="volver()"><mat-icon>arrow_back</mat-icon></button>
   <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
-  <span>{{ localId() ? 'Editar borrador' : 'Nuevo registro' }}</span>
+  <span>{{ titulo() }}</span>
   <span class="spacer"></span>
   <span class="net-pill" [class.off]="!online()">{{ online() ? 'En línea' : 'Offline' }}</span>
 </mat-toolbar>
@@ -11,6 +11,16 @@
     <div class="offline-banner">
       <mat-icon>cloud_off</mat-icon>
       <span>Puedes guardar y encolar el envío. Se sincroniza al recuperar internet.</span>
+    </div>
+  }
+
+  @if (serverId(); as sid) {
+    <div class="edit-banner">
+      <mat-icon>cloud_done</mat-icon>
+      <span>
+        Editando levantamiento #{{ sid }}. Las fotos que ya están en el servidor se mantienen;
+        aquí solo agregas fotos nuevas.
+      </span>
     </div>
   }
 
@@ -89,7 +99,7 @@
       mat-stroked-button
       type="button"
       (click)="guardarBorrador()"
-      [disabled]="guardando() || enviando()"
+      [disabled]="guardando() || enviando() || eliminando()"
     >
       @if (guardando()) {
         <mat-spinner diameter="18"></mat-spinner>
@@ -99,13 +109,31 @@
       Guardar borrador
     </button>
 
-    <button mat-flat-button color="primary" class="btn-enviar" type="submit" [disabled]="enviando() || guardando()">
+    <button mat-flat-button color="primary" class="btn-enviar" type="submit" [disabled]="enviando() || guardando() || eliminando()">
       @if (enviando()) {
         <mat-spinner diameter="20"></mat-spinner>
       } @else {
         <mat-icon>{{ online() ? 'cloud_upload' : 'schedule_send' }}</mat-icon>
       }
-      {{ online() ? 'Enviar registro' : 'Encolar envío' }}
+      @if (serverId()) {
+        {{ online() ? 'Guardar cambios' : 'Encolar cambios' }}
+      } @else {
+        {{ online() ? 'Enviar registro' : 'Encolar envío' }}
+      }
     </button>
+
+    @if (localId() && !serverId()) {
+      <button
+        mat-stroked-button
+        color="warn"
+        type="button"
+        class="btn-eliminar"
+        (click)="eliminarBorrador()"
+        [disabled]="eliminando() || enviando() || guardando()"
+      >
+        <mat-icon>delete</mat-icon>
+        Eliminar borrador
+      </button>
+    }
   </div>
 </form>
