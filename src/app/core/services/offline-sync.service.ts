@@ -5,6 +5,7 @@ import { OfflineStoreService } from './offline-store.service';
 import { SessionService } from './session.service';
 import { TerrenoApiService } from './terreno-api.service';
 import type { RegistroLocal, SyncResultado } from '../models/offline-registro.model';
+import { mensajeErrorHttp } from '../utils/http-error';
 
 @Injectable({ providedIn: 'root' })
 export class OfflineSyncService {
@@ -53,12 +54,12 @@ export class OfflineSyncService {
           sincronizados += 1;
         } catch (err) {
           conError += 1;
-          const mensaje =
-            err instanceof Error ? err.message : 'Error al sincronizar el registro.';
+          // Releer: sincronizarUno puede haber guardado serverId antes de fallar (fotos).
+          const actual = (await this.store.obtenerRegistro(registro.localId)) ?? registro;
           await this.store.guardarRegistro({
-            ...registro,
+            ...actual,
             estadoSync: 'error',
-            ultimoError: mensaje,
+            ultimoError: mensajeErrorHttp(err, 'Error al sincronizar el registro.'),
             fechaModificacion: new Date().toISOString(),
           });
         }
@@ -71,10 +72,10 @@ export class OfflineSyncService {
 
   private async sincronizarUno(registro: RegistroLocal): Promise<void> {
     const fotos = await this.store.listarFotos(registro.localId);
-    let serverId = registro.serverId;
-    let working = { ...registro };
+    let working: RegistroLocal = { ...registro, ultimoError: null };
+    let serverId = working.serverId && working.serverId > 0 ? working.serverId : null;
 
-    if (!serverId || serverId <= 0) {
+    if (!serverId) {
       serverId = await firstValueFrom(
         this.api.crear({
           nombreTerreno: working.nombreTerreno,
@@ -90,14 +91,27 @@ export class OfflineSyncService {
         serverId,
         fechaModificacion: new Date().toISOString(),
       };
+      // Persistir Id de servidor YA: si fallan fotos, no se vuelve a crear el registro.
       await this.store.guardarRegistro(working);
     }
 
-    for (const foto of fotos) {
-      const file = new File([foto.blob], foto.nombre, {
-        type: foto.mimeType || 'image/jpeg',
-      });
-      await firstValueFrom(this.api.subirImagen(file, working.blobStorage));
+    const fotosValidas = fotos.filter((f) => f.blob && (f.blob.size ?? 0) > 0);
+    if (fotos.length > 0 && fotosValidas.length === 0) {
+      throw new Error(
+        'Las fotos de este registro ya no están en el teléfono. Ábrelo, vuelve a agregarlas y sincroniza.',
+      );
+    }
+
+    let subidas = 0;
+    try {
+      for (const foto of fotosValidas) {
+        await firstValueFrom(this.api.subirImagen(foto.blob, working.blobStorage, foto.nombre));
+        subidas += 1;
+      }
+    } catch (err) {
+      throw new Error(
+        `Registro #${serverId} creado, pero falló la subida de fotos (${subidas}/${fotosValidas.length}): ${mensajeErrorHttp(err, 'error de red o almacenamiento')}`,
+      );
     }
 
     await this.store.guardarRegistro({
@@ -105,6 +119,7 @@ export class OfflineSyncService {
       serverId,
       estadoSync: 'sincronizado',
       ultimoError: null,
+      fotosEsperadas: fotosValidas.length,
       fechaModificacion: new Date().toISOString(),
     });
   }

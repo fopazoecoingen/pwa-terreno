@@ -200,6 +200,8 @@ export class FormularioPage implements OnInit {
       this.localId.set(reg.localId);
 
       const resultado = await this.sync.sincronizarPendientes();
+      const actualizado = await this.store.obtenerRegistro(reg.localId);
+
       if (resultado.sinConexion) {
         this.snack.open(
           'Sin conexión: el registro quedó pendiente y se enviará al recuperar red.',
@@ -210,16 +212,22 @@ export class FormularioPage implements OnInit {
         return;
       }
 
-      if (resultado.sincronizados > 0) {
-        const actualizado = await this.store.obtenerRegistro(reg.localId);
+      if (resultado.sinSesion) {
+        this.snack.open('Sesión inválida. Vuelve a iniciar sesión.', 'Cerrar', {
+          duration: 5000,
+        });
+        return;
+      }
+
+      if (resultado.sincronizados > 0 && actualizado?.estadoSync === 'sincronizado') {
         this.snack.open(
-          actualizado?.serverId
+          actualizado.serverId
             ? `Registro #${actualizado.serverId} enviado.`
             : 'Registro sincronizado.',
           'Cerrar',
           { duration: 4000 },
         );
-        if (actualizado?.serverId) {
+        if (actualizado.serverId) {
           void this.router.navigate(['/terreno/registros', actualizado.serverId]);
         } else {
           void this.router.navigateByUrl('/terreno/registros');
@@ -228,9 +236,10 @@ export class FormularioPage implements OnInit {
       }
 
       this.snack.open(
-        'Quedó pendiente de sincronizar. Revisa “Mis registros” o intenta de nuevo con red.',
+        actualizado?.ultimoError ||
+          'Quedó pendiente de sincronizar. Revisa “Mis registros” o pulsa Sync.',
         'Cerrar',
-        { duration: 5000 },
+        { duration: 6500 },
       );
       void this.router.navigateByUrl('/terreno/registros');
     } catch (err) {

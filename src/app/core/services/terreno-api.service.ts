@@ -38,8 +38,15 @@ export class TerrenoApiService {
     return this.http.post<unknown>(API.registroCrear(), payload).pipe(
       map((raw) => {
         if (typeof raw === 'number') return raw;
+        if (typeof raw === 'string' && /^\d+$/.test(raw.trim())) return Number(raw.trim());
         const o = (raw ?? {}) as Record<string, unknown>;
-        const id = Number(o['id'] ?? o['Id'] ?? o['data'] ?? 0);
+        const nested = (o['data'] ?? o['result'] ?? null) as Record<string, unknown> | number | null;
+        const id = Number(
+          o['id'] ??
+            o['Id'] ??
+            (typeof nested === 'number' ? nested : nested?.['id'] ?? nested?.['Id']) ??
+            0,
+        );
         if (!id) throw new Error('El servidor no devolvió el Id del registro.');
         return id;
       }),
@@ -66,18 +73,40 @@ export class TerrenoApiService {
     return this.http.get(API.descargarImagenTerreno(ruta), { responseType: 'blob' });
   }
 
-  subirImagen(file: File, subcarpeta: string): Observable<string> {
+  /**
+   * Sube imagen al blob. Usa Blob + nombre (no `File`) para evitar fallos en Safari/iOS.
+   */
+  subirImagen(blob: Blob, subcarpeta: string, nombreArchivo?: string): Observable<string> {
+    const nombre = this.normalizarNombreFoto(nombreArchivo, blob.type);
     const form = new FormData();
-    form.append('file', file, file.name);
+    // Safari/iOS: append Blob directo; `new File([...])` a veces rompe el multipart.
+    form.append('file', blob, nombre);
     return this.http.post<unknown>(API.uploadImagenTerreno(subcarpeta), form).pipe(
       map((raw) => {
         const o = (raw ?? {}) as Record<string, unknown>;
         const uri = String(
-          o['uri'] ?? o['Uri'] ?? o['url'] ?? o['Url'] ?? o['blobUri'] ?? o['BlobUri'] ?? '',
+          o['uri'] ??
+            o['Uri'] ??
+            o['url'] ??
+            o['Url'] ??
+            o['blobUri'] ??
+            o['BlobUri'] ??
+            (o['blob'] as Record<string, unknown> | undefined)?.['uri'] ??
+            (o['Blob'] as Record<string, unknown> | undefined)?.['Uri'] ??
+            '',
         ).trim();
         return uri;
       }),
     );
+  }
+
+  private normalizarNombreFoto(nombre: string | undefined, mime: string): string {
+    const base = (nombre || 'foto.jpg').trim() || 'foto.jpg';
+    if (/\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(base)) return base;
+    if (mime.includes('png')) return `${base}.png`;
+    if (mime.includes('webp')) return `${base}.webp`;
+    if (mime.includes('heic') || mime.includes('heif')) return `${base}.heic`;
+    return `${base}.jpg`;
   }
 
   descargarInforme(id: number): Observable<Blob> {
