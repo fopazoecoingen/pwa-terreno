@@ -13,6 +13,8 @@ export interface RegistroLocal {
   serverId: number | null;
   ultimoError: string | null;
   fotosEsperadas: number;
+  /** Rutas Blob a borrar en el próximo sync (fotos ya enviadas quitadas en edición). */
+  rutasAEliminar?: string[];
   fechaCreacion: string;
   fechaModificacion: string;
 }

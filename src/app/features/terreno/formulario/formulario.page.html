@@ -18,8 +18,8 @@
     <div class="edit-banner">
       <mat-icon>cloud_done</mat-icon>
       <span>
-        Editando levantamiento #{{ sid }}. Las fotos que ya están en el servidor se mantienen;
-        aquí solo agregas fotos nuevas.
+        Editando levantamiento #{{ sid }}. Puedes quitar fotos ya enviadas o agregar nuevas.
+        Los cambios se aplican al guardar.
       </span>
     </div>
   }
@@ -78,9 +78,35 @@
       </label>
     </div>
 
-    @if (fotos().length === 0) {
-      <p class="hint">Las fotos también quedan en el teléfono hasta sincronizar.</p>
-    } @else {
+    @if (cargandoExistentes()) {
+      <div class="state-inline"><mat-spinner diameter="28"></mat-spinner> Cargando fotos del servidor…</div>
+    }
+
+    @if (avisoExistentes()) {
+      <p class="hint">{{ avisoExistentes() }}</p>
+    }
+
+    @if (existentes().length > 0) {
+      <p class="section-fotos">En servidor ({{ existentes().length }})</p>
+      <div class="grid">
+        @for (f of existentes(); track f.ruta) {
+          <div class="thumb existente">
+            @if (f.previewUrl) {
+              <img [src]="f.previewUrl" [alt]="f.nombre" />
+            } @else {
+              <div class="thumb-fallback"><mat-icon>image</mat-icon></div>
+            }
+            <span class="badge">Enviada</span>
+            <button mat-icon-button type="button" (click)="quitarExistente(f)" aria-label="Quitar del servidor">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (fotos().length > 0) {
+      <p class="section-fotos">Nuevas ({{ fotos().length }})</p>
       <div class="grid">
         @for (f of fotos(); track f.previewUrl; let i = $index) {
           <div class="thumb">
@@ -91,6 +117,14 @@
           </div>
         }
       </div>
+    } @else if (!existentes().length && !cargandoExistentes()) {
+      <p class="hint">Las fotos nuevas quedan en el teléfono hasta sincronizar.</p>
+    }
+
+    @if (rutasAEliminar().length > 0) {
+      <p class="hint warn-del">
+        {{ rutasAEliminar().length }} foto(s) se eliminarán del servidor al guardar.
+      </p>
     }
   </div>
 

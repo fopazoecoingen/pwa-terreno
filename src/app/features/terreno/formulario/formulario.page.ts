@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { firstValueFrom } from 'rxjs';
 import { TIPOS_LUGAR } from '../../../core/config/api.config';
 import { SessionService } from '../../../core/services/session.service';
 import { TerrenoApiService } from '../../../core/services/terreno-api.service';
@@ -29,6 +30,12 @@ interface FotoPendiente {
   previewUrl: string;
 }
 
+interface FotoExistente {
+  nombre: string;
+  ruta: string;
+  previewUrl: string;
+}
+
 @Component({
   selector: 'app-formulario-page',
   standalone: true,
@@ -46,7 +53,7 @@ interface FotoPendiente {
   templateUrl: './formulario.page.html',
   styleUrl: './formulario.page.scss',
 })
-export class FormularioPage implements OnInit {
+export class FormularioPage implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(TerrenoApiService);
   private readonly session = inject(SessionService);
@@ -60,14 +67,19 @@ export class FormularioPage implements OnInit {
   readonly tipos = TIPOS_LUGAR;
   readonly enviando = signal(false);
   readonly guardando = signal(false);
+  readonly cargandoExistentes = signal(false);
   readonly fotos = signal<FotoPendiente[]>([]);
+  readonly existentes = signal<FotoExistente[]>([]);
+  readonly rutasAEliminar = signal<string[]>([]);
   readonly servicios = signal<ServicioTerreno[]>([]);
   readonly servicioPreseleccionado = signal<ServicioTerreno | null>(null);
   readonly online = this.connectivity.online;
   readonly localId = signal<string | null>(null);
   readonly serverId = signal<number | null>(null);
+  readonly carpetaBlob = signal('');
   readonly titulo = signal('Nuevo registro');
   readonly eliminando = signal(false);
+  readonly avisoExistentes = signal('');
 
   readonly form = this.fb.nonNullable.group({
     nombreTerreno: ['', [Validators.required, Validators.maxLength(120)]],
@@ -102,12 +114,15 @@ export class FormularioPage implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    for (const f of this.fotos()) URL.revokeObjectURL(f.previewUrl);
+    for (const f of this.existentes()) URL.revokeObjectURL(f.previewUrl);
+  }
+
   private async cargarServicios(): Promise<void> {
     const usuarioId = this.session.usuarioId();
     try {
-      const lista = await new Promise<ServicioTerreno[]>((resolve, reject) => {
-        this.api.listarServicios().subscribe({ next: resolve, error: reject });
-      });
+      const lista = await firstValueFrom(this.api.listarServicios());
       const filtrada = lista.filter((s) => s.id > 0);
       this.servicios.set(filtrada);
       if (usuarioId) await this.store.cachearServicios(usuarioId, filtrada);
@@ -132,15 +147,17 @@ export class FormularioPage implements OnInit {
     }
     this.localId.set(localId);
     this.serverId.set(reg.serverId && reg.serverId > 0 ? reg.serverId : null);
-    this.titulo.set(
-      this.serverId() ? 'Editar levantamiento' : 'Editar borrador',
-    );
+    this.titulo.set(this.serverId() ? 'Editar levantamiento' : 'Editar borrador');
+    this.rutasAEliminar.set([...(reg.rutasAEliminar ?? [])]);
+    const carpeta = normalizarCarpetaBlobStorage(reg.blobStorage, reg.nombreTerreno);
+    this.carpetaBlob.set(carpeta);
     this.form.patchValue({
       nombreTerreno: reg.nombreTerreno,
       descripcion: reg.descripcion,
       observacion: reg.observacion,
       servicioEcoingenId: reg.servicioId ?? 0,
     });
+
     const fotos = await this.store.listarFotos(localId);
     this.fotos.set(
       fotos.map((f) => ({
@@ -148,6 +165,58 @@ export class FormularioPage implements OnInit {
         previewUrl: URL.createObjectURL(f.blob),
       })),
     );
+
+    if (this.serverId() && carpeta) {
+      await this.cargarFotosServidor(carpeta);
+    }
+  }
+
+  private async cargarFotosServidor(carpeta: string): Promise<void> {
+    this.cargandoExistentes.set(true);
+    this.avisoExistentes.set('');
+    try {
+      if (!this.online()) {
+        this.avisoExistentes.set(
+          'Sin conexión: no se pueden mostrar las fotos ya enviadas. Puedes agregar fotos nuevas.',
+        );
+        return;
+      }
+      const imgs = await firstValueFrom(this.api.listarImagenes(carpeta));
+      const quitadas = new Set(this.rutasAEliminar());
+      const visibles = imgs.filter((img) => {
+        const ruta = (img.ruta || img.nombre || '').trim();
+        return ruta && !quitadas.has(ruta);
+      });
+
+      const cargadas: FotoExistente[] = [];
+      for (const img of visibles) {
+        const ruta = (img.ruta || img.nombre).trim();
+        try {
+          const blob = await firstValueFrom(this.api.descargarImagen(ruta));
+          cargadas.push({
+            nombre: img.nombre || ruta.split('/').pop() || 'foto',
+            ruta,
+            previewUrl: URL.createObjectURL(blob),
+          });
+        } catch {
+          cargadas.push({
+            nombre: img.nombre || ruta.split('/').pop() || 'foto',
+            ruta,
+            previewUrl: '',
+          });
+        }
+      }
+      this.existentes.set(cargadas);
+      if (!cargadas.length && !imgs.length) {
+        this.avisoExistentes.set('Este levantamiento aún no tiene fotos en el servidor.');
+      }
+    } catch (err) {
+      this.avisoExistentes.set(
+        mensajeErrorHttp(err, 'No se pudieron cargar las fotos ya enviadas.'),
+      );
+    } finally {
+      this.cargandoExistentes.set(false);
+    }
   }
 
   onFilesSelected(event: Event): void {
@@ -169,6 +238,21 @@ export class FormularioPage implements OnInit {
       if (removed) URL.revokeObjectURL(removed.previewUrl);
       return copy;
     });
+  }
+
+  quitarExistente(foto: FotoExistente): void {
+    if (
+      !confirm(
+        'Esta foto ya fue enviada. Al guardar los cambios se eliminará también del servidor.',
+      )
+    ) {
+      return;
+    }
+    this.existentes.update((prev) => prev.filter((f) => f.ruta !== foto.ruta));
+    if (foto.previewUrl) URL.revokeObjectURL(foto.previewUrl);
+    this.rutasAEliminar.update((prev) =>
+      prev.includes(foto.ruta) ? prev : [...prev, foto.ruta],
+    );
   }
 
   volver(): void {
@@ -254,7 +338,7 @@ export class FormularioPage implements OnInit {
       if (resultado.sincronizados > 0 && actualizado?.estadoSync === 'sincronizado') {
         this.snack.open(
           actualizado.serverId
-            ? `Registro #${actualizado.serverId} enviado.`
+            ? `Registro #${actualizado.serverId} actualizado.`
             : 'Registro sincronizado.',
           'Cerrar',
           { duration: 4000 },
@@ -294,11 +378,10 @@ export class FormularioPage implements OnInit {
     const id = this.localId() ?? this.store.nuevoLocalId();
     const existente = await this.store.obtenerRegistro(id);
 
-    // Si ya está en servidor, conservar carpeta Blob (como Flutter) aunque cambie el nombre.
     const carpeta =
       existente?.serverId && existente.blobStorage
         ? normalizarCarpetaBlobStorage(existente.blobStorage, v.nombreTerreno.trim())
-        : subcarpetaBlobParaRegistro(v.nombreTerreno, servicioId);
+        : this.carpetaBlob() || subcarpetaBlobParaRegistro(v.nombreTerreno, servicioId);
 
     const registro: RegistroLocal = {
       localId: id,
@@ -313,13 +396,13 @@ export class FormularioPage implements OnInit {
       serverId: existente?.serverId ?? this.serverId(),
       ultimoError: null,
       fotosEsperadas: this.fotos().length,
+      rutasAEliminar: [...this.rutasAEliminar()],
       fechaCreacion: existente?.fechaCreacion ?? ahora,
       fechaModificacion: ahora,
     };
 
     await this.store.guardarRegistro(registro);
 
-    // Materializar bytes YA: en iOS el File de la cámara se “vacía” si se guarda crudo en IndexedDB.
     const fotosMaterializadas = await Promise.all(
       this.fotos().map(async (f, orden) => {
         const mime = f.file.type || 'image/jpeg';

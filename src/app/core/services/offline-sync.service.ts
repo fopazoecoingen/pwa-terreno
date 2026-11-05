@@ -86,6 +86,19 @@ export class OfflineSyncService {
     };
 
     if (serverId) {
+      // Primero borrar del Blob las fotos marcadas al editar (como Flutter).
+      const aEliminar = [...new Set((working.rutasAEliminar ?? []).map((r) => r.trim()).filter(Boolean))];
+      for (const ruta of aEliminar) {
+        try {
+          await firstValueFrom(this.api.eliminarImagen(serverId, ruta));
+        } catch (err) {
+          const status = (err as { status?: number })?.status;
+          if (status !== 404) throw err;
+        }
+      }
+      working = { ...working, rutasAEliminar: [] };
+      await this.store.guardarRegistro(working);
+
       // Edición de un levantamiento ya enviado (como Flutter actualizarRegistro).
       await firstValueFrom(this.api.actualizar({ ...payload, id: serverId }));
     } else {
@@ -93,6 +106,7 @@ export class OfflineSyncService {
       working = {
         ...working,
         serverId,
+        rutasAEliminar: [],
         fechaModificacion: new Date().toISOString(),
       };
       // Persistir Id YA: si fallan fotos, no se duplica el registro.
@@ -138,6 +152,7 @@ export class OfflineSyncService {
       estadoSync: 'sincronizado',
       ultimoError: null,
       fotosEsperadas: 0,
+      rutasAEliminar: [],
       fechaModificacion: new Date().toISOString(),
     });
   }

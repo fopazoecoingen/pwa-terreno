@@ -60,6 +60,12 @@ export class TerrenoApiService {
     return this.http.put<unknown>(API.registroActualizar(), payload).pipe(map(() => undefined));
   }
 
+  eliminarImagen(serverId: number, ruta: string): Observable<void> {
+    return this.http
+      .delete<unknown>(API.registroEliminarImagen(serverId, ruta))
+      .pipe(map(() => undefined));
+  }
+
   listarServicios(): Observable<ServicioTerreno[]> {
     return this.http
       .get<unknown>(API.registroServicios())

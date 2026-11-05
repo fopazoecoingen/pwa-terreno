@@ -94,6 +94,7 @@ export class OfflineStoreService {
       serverId: params.serverId,
       ultimoError: null,
       fotosEsperadas: 0,
+      rutasAEliminar: [],
       fechaCreacion: params.fechaCreacion || ahora,
       fechaModificacion: ahora,
     };
