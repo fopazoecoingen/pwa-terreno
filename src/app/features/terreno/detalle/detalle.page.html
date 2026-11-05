@@ -1,0 +1,43 @@
+<mat-toolbar class="topbar eco-topbar">
+  <button mat-icon-button type="button" (click)="volver()"><mat-icon>arrow_back</mat-icon></button>
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span>Detalle</span>
+  <span class="spacer"></span>
+  @if (registro(); as r) {
+    <button mat-icon-button type="button" (click)="descargarInforme()" aria-label="Informe PDF">
+      <mat-icon>picture_as_pdf</mat-icon>
+    </button>
+  }
+</mat-toolbar>
+
+<main class="page">
+  @if (cargando()) {
+    <div class="state"><mat-spinner diameter="36"></mat-spinner></div>
+  } @else if (registro(); as r) {
+    <section class="info">
+      <h2>{{ r.nombreTerreno }}</h2>
+      <p><strong>Tipo:</strong> {{ r.descripcion || '—' }}</p>
+      <p><strong>Observación:</strong> {{ r.observacion || '—' }}</p>
+      <p><strong>Carpeta:</strong> {{ r.blobStorage || '—' }}</p>
+      <p><strong>Creado:</strong> {{ r.fechaCreacionRegistro | date: 'dd/MM/yyyy HH:mm' }}</p>
+      @if (r.servicioEmpresa || r.servicioSucursal) {
+        <p><strong>Servicio:</strong> {{ r.servicioEmpresa }} · {{ r.servicioSucursal }}</p>
+      }
+    </section>
+
+    <section class="fotos">
+      <h3>Fotos ({{ imagenes().length }})</h3>
+      @if (imagenes().length === 0) {
+        <p class="muted">Sin imágenes en Blob para esta carpeta.</p>
+      } @else {
+        <div class="grid">
+          @for (img of imagenes(); track img.meta.ruta || img.meta.nombre) {
+            <a [href]="img.url" target="_blank" rel="noopener">
+              <img [src]="img.url" [alt]="img.meta.nombre || 'foto'" />
+            </a>
+          }
+        </div>
+      }
+    </section>
+  }
+</main>

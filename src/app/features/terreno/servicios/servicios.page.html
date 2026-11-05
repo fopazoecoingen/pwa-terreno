@@ -1,0 +1,37 @@
+<mat-toolbar class="topbar eco-topbar">
+  <button mat-icon-button type="button" (click)="volver()"><mat-icon>arrow_back</mat-icon></button>
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span>Mis servicios</span>
+  <span class="spacer"></span>
+  <button mat-icon-button type="button" (click)="cargar()" [disabled]="cargando()">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</mat-toolbar>
+
+<main class="page">
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Buscar</mat-label>
+    <input matInput [ngModel]="filtro()" (ngModelChange)="filtro.set($event)" placeholder="Empresa, sucursal…" />
+    <mat-icon matPrefix>search</mat-icon>
+  </mat-form-field>
+
+  @if (cargando()) {
+    <div class="state"><mat-spinner diameter="36"></mat-spinner></div>
+  } @else if (filtrados().length === 0) {
+    <div class="state">Sin servicios disponibles.</div>
+  } @else {
+    @for (s of filtrados(); track s.id) {
+      <article class="card">
+        <div>
+          <strong>{{ etiqueta(s) }}</strong>
+          <span>{{ s.tipoContrato }} · {{ s.anyo }} · {{ s.estadoServicio }}</span>
+          <span>Levantamientos: {{ s.levantamientos }} · Rol: {{ s.rolUsuario || '—' }}</span>
+        </div>
+        <button mat-stroked-button color="primary" type="button" (click)="nuevoEnServicio(s)">
+          <mat-icon>add</mat-icon>
+          Nuevo
+        </button>
+      </article>
+    }
+  }
+</main>

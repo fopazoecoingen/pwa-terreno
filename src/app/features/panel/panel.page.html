@@ -1,0 +1,46 @@
+<mat-toolbar class="topbar eco-topbar">
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span class="brand">Ecoingen</span>
+  <span class="spacer"></span>
+  <button mat-icon-button type="button" (click)="cerrarSesion()" aria-label="Cerrar sesión">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
+
+<div class="session-row">
+  <div class="eco-session-chip">
+    <span class="avatar">{{ inicial() }}</span>
+    <span class="name">{{ usuario() }}</span>
+    <span class="net" [class.off]="!online()">{{ online() ? 'Online' : 'Offline' }}</span>
+  </div>
+</div>
+
+<section class="eco-hero">
+  <div class="hero-icon">
+    <mat-icon>apps</mat-icon>
+  </div>
+  <div>
+    <h1>Elige tu módulo</h1>
+    <p>Terreno y documentación</p>
+  </div>
+</section>
+
+<main class="panel">
+  <button type="button" class="eco-mod-card terreno" (click)="ir('/terreno')">
+    <div class="icon-box"><mat-icon>terrain</mat-icon></div>
+    <div class="copy">
+      <strong>Terreno</strong>
+      <span>Formulario de campo y registros enviados</span>
+    </div>
+    <mat-icon class="chevron">arrow_forward_ios</mat-icon>
+  </button>
+
+  <button type="button" class="eco-mod-card arranque" (click)="ir('/arranque')">
+    <div class="icon-box"><mat-icon>folder_shared</mat-icon></div>
+    <div class="copy">
+      <strong>Carpetas de arranque</strong>
+      <span>Consulta contratos, capacitaciones, personal y documentación</span>
+    </div>
+    <mat-icon class="chevron">arrow_forward_ios</mat-icon>
+  </button>
+</main>

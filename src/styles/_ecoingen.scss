@@ -1,0 +1,257 @@
+// Paleta alineada a app-terreno (Flutter)
+$naranja: #ff6b35;
+$naranja-oscuro: #e64a19;
+$naranja-claro: #ffe0b2;
+$fondo: #fff8f5;
+$texto: #424242;
+$texto-suave: #757575;
+$verde-terreno: #2e7d32;
+$verde-fondo: #e8f5e9;
+$azul-arranque: #1565c0;
+$azul-fondo: #e3f2fd;
+
+:root {
+  --eco-naranja: #{$naranja};
+  --eco-naranja-oscuro: #{$naranja-oscuro};
+  --eco-naranja-claro: #{$naranja-claro};
+  --eco-fondo: #{$fondo};
+  --eco-texto: #{$texto};
+  --eco-texto-suave: #{$texto-suave};
+  --eco-verde: #{$verde-terreno};
+  --eco-verde-fondo: #{$verde-fondo};
+  --eco-azul: #{$azul-arranque};
+  --eco-azul-fondo: #{$azul-fondo};
+  --eco-gradient: linear-gradient(135deg, #{$naranja-oscuro} 0%, #{$naranja} 100%);
+  --eco-primary: #{$naranja};
+  --eco-primary-mid: #{$naranja};
+  --eco-primary-dark: #{$naranja-oscuro};
+  --eco-bg: #{$fondo};
+  --eco-border: #ffe0cc;
+  --eco-text: #{$texto};
+  --eco-text-muted: #{$texto-suave};
+}
+
+.eco-topbar {
+  background: var(--eco-naranja-oscuro) !important;
+  color: #fff !important;
+  gap: 0.35rem;
+
+  button {
+    color: #fff !important;
+  }
+
+  .eco-isotipo {
+    margin-right: 0.35rem;
+  }
+}
+
+.eco-isotipo {
+  width: 34px;
+  height: 34px;
+  padding: 5px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.eco-logo-full {
+  display: block;
+  max-width: 260px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.eco-hero {
+  width: 100%;
+  background: var(--eco-gradient);
+  border-radius: 0 0 28px 28px;
+  padding: 0.5rem 1.5rem 1.75rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  margin-top: -1px;
+
+  .hero-icon {
+    width: 66px;
+    height: 66px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.2);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 38px;
+      width: 38px;
+      height: 38px;
+      color: #fff;
+    }
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  p {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.72);
+  }
+}
+
+.eco-mod-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-height: 140px;
+  text-align: left;
+  border: none;
+  border-radius: 20px;
+  padding: 1.35rem;
+  cursor: pointer;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+
+  .icon-box {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 38px;
+      width: 38px;
+      height: 38px;
+    }
+  }
+
+  .copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  span {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.9rem;
+    color: #757575;
+    line-height: 1.35;
+  }
+
+  .chevron {
+    color: inherit;
+    opacity: 0.45;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  &.terreno {
+    color: var(--eco-verde);
+    box-shadow: 0 4px 14px rgba(46, 125, 50, 0.18);
+
+    .icon-box {
+      background: var(--eco-verde-fondo);
+    }
+  }
+
+  &.arranque {
+    color: var(--eco-azul);
+    box-shadow: 0 4px 14px rgba(21, 101, 192, 0.18);
+
+    .icon-box {
+      background: var(--eco-azul-fondo);
+    }
+  }
+
+  &.nuevo {
+    color: var(--eco-naranja);
+    box-shadow: 0 4px 14px rgba(255, 107, 53, 0.18);
+
+    .icon-box {
+      background: #fff3e0;
+    }
+  }
+
+  &.servicios {
+    color: #00897b;
+    box-shadow: 0 4px 14px rgba(0, 137, 123, 0.16);
+
+    .icon-box {
+      background: #e0f2f1;
+    }
+  }
+
+  &.registros {
+    color: #5d4037;
+    box-shadow: 0 4px 14px rgba(93, 64, 55, 0.14);
+
+    .icon-box {
+      background: #efebe9;
+    }
+  }
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+.eco-session-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.65rem 0.25rem 0.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 0.82rem;
+  max-width: 100%;
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 0.8rem;
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 42vw;
+  }
+
+  .net {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(76, 175, 80, 0.35);
+
+    &.off {
+      background: rgba(0, 0, 0, 0.28);
+    }
+  }
+}

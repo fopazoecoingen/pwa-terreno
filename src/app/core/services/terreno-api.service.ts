@@ -1,0 +1,86 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
+import { API } from '../config/api.config';
+import {
+  ImagenTerreno,
+  RegistroTerreno,
+  RegistroTerrenoCreacion,
+  ServicioTerreno,
+  mapImagen,
+  mapRegistro,
+  mapServicio,
+} from '../models/terreno.model';
+
+@Injectable({ providedIn: 'root' })
+export class TerrenoApiService {
+  private readonly http = inject(HttpClient);
+
+  listarRegistros(): Observable<RegistroTerreno[]> {
+    return this.http.get<unknown>(API.registroListar()).pipe(
+      map((raw) => {
+        const lista = Array.isArray(raw)
+          ? raw
+          : (((raw as Record<string, unknown>)?.['data'] ??
+              (raw as Record<string, unknown>)?.['items'] ??
+              (raw as Record<string, unknown>)?.['registros'] ??
+              []) as unknown[]);
+        return (Array.isArray(lista) ? lista : []).map(mapRegistro);
+      }),
+    );
+  }
+
+  obtener(id: number): Observable<RegistroTerreno> {
+    return this.http.get<unknown>(API.registroObtener(id)).pipe(map(mapRegistro));
+  }
+
+  crear(payload: RegistroTerrenoCreacion): Observable<number> {
+    return this.http.post<unknown>(API.registroCrear(), payload).pipe(
+      map((raw) => {
+        if (typeof raw === 'number') return raw;
+        const o = (raw ?? {}) as Record<string, unknown>;
+        const id = Number(o['id'] ?? o['Id'] ?? o['data'] ?? 0);
+        if (!id) throw new Error('El servidor no devolvió el Id del registro.');
+        return id;
+      }),
+    );
+  }
+
+  actualizar(payload: RegistroTerrenoCreacion & { id: number }): Observable<void> {
+    return this.http.put<unknown>(API.registroActualizar(), payload).pipe(map(() => undefined));
+  }
+
+  listarServicios(): Observable<ServicioTerreno[]> {
+    return this.http
+      .get<unknown>(API.registroServicios())
+      .pipe(map((raw) => (Array.isArray(raw) ? raw : []).map(mapServicio)));
+  }
+
+  listarImagenes(subcarpeta: string): Observable<ImagenTerreno[]> {
+    return this.http
+      .get<unknown>(API.listarImagenesTerreno(subcarpeta))
+      .pipe(map((raw) => (Array.isArray(raw) ? raw : []).map(mapImagen)));
+  }
+
+  descargarImagen(ruta: string): Observable<Blob> {
+    return this.http.get(API.descargarImagenTerreno(ruta), { responseType: 'blob' });
+  }
+
+  subirImagen(file: File, subcarpeta: string): Observable<string> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<unknown>(API.uploadImagenTerreno(subcarpeta), form).pipe(
+      map((raw) => {
+        const o = (raw ?? {}) as Record<string, unknown>;
+        const uri = String(
+          o['uri'] ?? o['Uri'] ?? o['url'] ?? o['Url'] ?? o['blobUri'] ?? o['BlobUri'] ?? '',
+        ).trim();
+        return uri;
+      }),
+    );
+  }
+
+  descargarInforme(id: number): Observable<Blob> {
+    return this.http.get(API.registroInforme(id), { responseType: 'blob' });
+  }
+}

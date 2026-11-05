@@ -1,0 +1,141 @@
+.topbar {
+  // color via .eco-topbar
+  background: transparent;
+  color: #fff;
+  button { color: #fff; }
+  .spacer { flex: 1; }
+  .net-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    &.off { background: rgba(0, 0, 0, 0.25); }
+  }
+}
+
+.offline-banner {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 0.86rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+
+  button mat-icon,
+  button mat-spinner {
+    margin-right: 0.3rem;
+  }
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.full { width: 100%; }
+
+.svc-banner {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #e0f2f1;
+  color: #00695c;
+
+  strong { display: block; }
+  span { display: block; font-size: 0.82rem; opacity: 0.9; margin-top: 0.15rem; }
+}
+
+.fotos-block {
+  border: 1px dashed #e0cbb8;
+  border-radius: 12px;
+  padding: 0.85rem;
+  background: #fffaf5;
+}
+
+.fotos-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: var(--eco-gradient);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &.galeria {
+    background: var(--eco-primary-dark);
+  }
+}
+
+.hint {
+  margin: 0;
+  color: #9c8878;
+  font-size: 0.84rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #eee;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+  }
+}
+
+.btn-enviar {
+  height: 46px;
+  font-weight: 700;
+  margin-top: 0.35rem;
+  background: var(--eco-gradient) !important;
+  color: #fff !important;
+
+  mat-icon,
+  mat-spinner {
+    margin-right: 0.35rem;
+  }
+}

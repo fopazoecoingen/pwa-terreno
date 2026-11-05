@@ -1,0 +1,83 @@
+<mat-toolbar class="topbar eco-topbar">
+  <button mat-icon-button type="button" (click)="volver()"><mat-icon>arrow_back</mat-icon></button>
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span>Mis registros</span>
+  <span class="spacer"></span>
+  <button
+    mat-icon-button
+    type="button"
+    (click)="sincronizar()"
+    [disabled]="sincronizando() || !online()"
+    aria-label="Sincronizar"
+  >
+    @if (sincronizando()) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      <mat-icon>sync</mat-icon>
+    }
+  </button>
+  <button mat-icon-button type="button" (click)="cargar()" [disabled]="cargando()">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  <button mat-icon-button type="button" (click)="nuevo()"><mat-icon>add</mat-icon></button>
+</mat-toolbar>
+
+<main class="page">
+  @if (!online()) {
+    <div class="banner warn">
+      <mat-icon>cloud_off</mat-icon>
+      Modo offline. Se muestran borradores locales
+      @if (desdeCache()) {
+        y la última lista del servidor en caché.
+      }
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="state"><mat-spinner diameter="36"></mat-spinner></div>
+  } @else {
+    @if (locales().length > 0) {
+      <h3 class="section-title">En este teléfono</h3>
+      @for (r of locales(); track r.localId) {
+        <button type="button" class="card local" (click)="abrirLocal(r)">
+          <div class="card-main">
+            <strong>{{ r.nombreTerreno }}</strong>
+            <span>{{ r.descripcion || 'Sin tipo' }} · {{ etiquetaEstado(r.estadoSync) }}</span>
+            @if (r.ultimoError) {
+              <span class="err">{{ r.ultimoError }}</span>
+            }
+          </div>
+          <div class="card-meta">
+            <span>{{ r.fechaModificacion | date: 'dd/MM/yyyy HH:mm' }}</span>
+            <mat-icon>chevron_right</mat-icon>
+          </div>
+        </button>
+      }
+    }
+
+    <h3 class="section-title">En servidor</h3>
+    @if (registros().length === 0) {
+      <div class="state empty">
+        <mat-icon>inbox</mat-icon>
+        <p>Sin registros en servidor{{ desdeCache() ? ' (caché vacía)' : '' }}.</p>
+        <button mat-flat-button color="primary" type="button" (click)="nuevo()">Crear registro</button>
+      </div>
+    } @else {
+      @for (r of registros(); track r.id) {
+        <button type="button" class="card" (click)="abrirServidor(r)">
+          <div class="card-main">
+            <strong>{{ r.nombreTerreno }}</strong>
+            <span>{{ r.descripcion || 'Sin tipo' }}</span>
+            @if (r.servicioEmpresa || r.servicioSucursal) {
+              <span class="svc">{{ r.servicioEmpresa }} · {{ r.servicioSucursal }}</span>
+            }
+          </div>
+          <div class="card-meta">
+            <span>{{ r.fechaCreacionRegistro | date: 'dd/MM/yyyy HH:mm' }}</span>
+            <mat-icon>chevron_right</mat-icon>
+          </div>
+        </button>
+      }
+    }
+  }
+</main>

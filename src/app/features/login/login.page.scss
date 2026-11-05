@@ -1,0 +1,84 @@
+.login-shell {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.75rem;
+  background: var(--eco-fondo);
+}
+
+.login-wrap {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.eco-logo-full {
+  max-width: 240px;
+  margin-bottom: 0.35rem;
+}
+
+h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #424242;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.88rem;
+
+  &.online {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  &.offline {
+    background: #fff3e0;
+    color: #e65100;
+    align-items: flex-start;
+
+    strong {
+      display: block;
+    }
+
+    p {
+      margin: 0.2rem 0 0;
+      font-size: 0.82rem;
+      line-height: 1.35;
+      opacity: 0.95;
+    }
+  }
+}
+
+.login-card {
+  margin-top: 0.35rem;
+  background: #fff;
+  border-radius: 24px;
+  padding: 1.35rem;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.full {
+  width: 100%;
+}
+
+.btn-login {
+  margin-top: 0.5rem;
+  height: 52px;
+  border-radius: 14px !important;
+  font-size: 1.05rem;
+  font-weight: 800;
+  background: var(--eco-naranja-oscuro) !important;
+  color: #fff !important;
+}

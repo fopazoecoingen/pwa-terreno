@@ -1,0 +1,153 @@
+<mat-toolbar class="topbar eco-topbar">
+  <button mat-icon-button type="button" (click)="volver()" aria-label="Volver">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span class="title">Carpetas de arranque</span>
+  <span class="spacer"></span>
+  <button
+    mat-icon-button
+    type="button"
+    (click)="recargar()"
+    [disabled]="cargando()"
+    aria-label="Recargar"
+  >
+    <mat-icon>refresh</mat-icon>
+  </button>
+</mat-toolbar>
+
+<main class="page">
+  <div class="info-banner">
+    <mat-icon>info_outline</mat-icon>
+    <p>
+      Solo lectura. Puedes navegar y abrir archivos. La carga y edición se hace desde el CRM.
+    </p>
+  </div>
+
+  <nav class="crumbs" aria-label="Ruta">
+    @for (c of breadcrumbs(); track c.ruta; let last = $last; let i = $index) {
+      @if (i > 0) {
+        <mat-icon class="sep">chevron_right</mat-icon>
+      }
+      <button
+        type="button"
+        class="crumb-chip"
+        [class.selected]="last"
+        (click)="irBreadcrumb(c.ruta)"
+      >
+        {{ c.label }}
+      </button>
+    }
+  </nav>
+
+  @if (mostrarBuscador()) {
+    <div class="search-block">
+      <mat-form-field appearance="outline" class="full search-field">
+        <mat-label>{{ enCatalogoEmpresas() ? 'Buscar empresa' : 'Buscar trabajador' }}</mat-label>
+        <input
+          matInput
+          [ngModel]="filtro()"
+          (ngModelChange)="filtro.set($event)"
+          [placeholder]="
+            enCatalogoEmpresas() ? 'Nombre o RUT…' : 'Nombre del trabajador…'
+          "
+        />
+        <mat-icon matPrefix>search</mat-icon>
+        @if (filtro().trim()) {
+          <button mat-icon-button matSuffix type="button" (click)="filtro.set('')" aria-label="Limpiar">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </mat-form-field>
+      <p class="search-meta">
+        @if (filtro().trim()) {
+          {{ carpetasFiltradas().length }} de {{ contenido()?.carpetas?.length || 0 }} · filtradas
+        } @else {
+          {{ contenido()?.carpetas?.length || 0 }}
+          {{ enCatalogoEmpresas() ? 'empresa(s)' : 'persona(s)' }}
+        }
+      </p>
+    </div>
+  }
+
+  @if (cargando()) {
+    <div class="state">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Cargando…</p>
+    </div>
+  } @else if (error(); as err) {
+    <div class="state">
+      <mat-icon class="err-icon">error_outline</mat-icon>
+      <p>{{ err }}</p>
+      <button mat-flat-button color="primary" type="button" (click)="recargar()">
+        <mat-icon>refresh</mat-icon>
+        Reintentar
+      </button>
+    </div>
+  } @else if (contenido(); as c) {
+    @if (carpetasFiltradas().length === 0 && c.archivos.length === 0) {
+      <div class="state">
+        <mat-icon class="empty-icon">
+          {{ mostrarBuscador() && filtro().trim() ? 'search_off' : 'folder_off' }}
+        </mat-icon>
+        <p class="empty-title">
+          @if (mostrarBuscador() && filtro().trim()) {
+            Sin resultados para «{{ filtro().trim() }}»
+          } @else {
+            Carpeta vacía
+          }
+        </p>
+        @if (mostrarBuscador() && filtro().trim()) {
+          <p class="empty-sub">Prueba con otro nombre o RUT</p>
+        }
+      </div>
+    } @else {
+      @if (carpetasFiltradas().length > 0) {
+        <h3 class="section-title">
+          {{ enCatalogoEmpresas() ? 'Empresas' : 'Carpetas' }}
+        </h3>
+        @for (folder of carpetasFiltradas(); track folder.id) {
+          <button type="button" class="tile folder" (click)="abrirCarpeta(folder)">
+            <span class="avatar folder-av">
+              <mat-icon>{{ iconoCarpeta(folder) }}</mat-icon>
+            </span>
+            <span class="copy">
+              <strong>{{ labelCarpeta(folder) }}</strong>
+              @if (folder.count > 0) {
+                <span>{{ folder.count }} elementos</span>
+              }
+            </span>
+            <mat-icon class="chevron">chevron_right</mat-icon>
+          </button>
+        }
+      }
+
+      @if (c.archivos.length > 0) {
+        <h3 class="section-title">Archivos</h3>
+        @for (file of c.archivos; track file.path) {
+          <button
+            type="button"
+            class="tile file"
+            (click)="descargar(file)"
+            [disabled]="descargando() === file.path"
+          >
+            <span class="avatar file-av">
+              @if (descargando() === file.path) {
+                <mat-spinner diameter="22"></mat-spinner>
+              } @else {
+                <mat-icon>insert_drive_file</mat-icon>
+              }
+            </span>
+            <span class="copy">
+              <strong>{{ file.name }}</strong>
+              @if (metaArchivo(file); as meta) {
+                <span>{{ meta }}</span>
+              }
+            </span>
+            <mat-icon class="open-icon">open_in_new</mat-icon>
+          </button>
+        }
+      }
+    }
+  }
+</main>

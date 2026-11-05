@@ -1,0 +1,78 @@
+<mat-toolbar class="topbar eco-topbar">
+  <button mat-icon-button type="button" (click)="volver()" aria-label="Volver">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span>Módulo Terreno</span>
+  <span class="spacer"></span>
+</mat-toolbar>
+
+<div class="session-row">
+  <div class="eco-session-chip">
+    <span class="avatar">{{ inicial() }}</span>
+    <span class="name">{{ usuario() }}</span>
+    <span class="net" [class.off]="!online()">{{ online() ? 'Online' : 'Offline' }}</span>
+  </div>
+</div>
+
+<section class="eco-hero">
+  <div class="hero-icon">
+    <mat-icon>terrain</mat-icon>
+  </div>
+  <div>
+    <h1>Trabajo en terreno</h1>
+    <p>Registra visitas con fotos y voz</p>
+  </div>
+</section>
+
+<main class="page">
+  @if (borradores() > 0 || pendientes() > 0) {
+    <div class="status-banner" [class.cola]="pendientes() > 0">
+      <mat-icon>{{ pendientes() > 0 ? 'cloud_queue' : 'edit_note' }}</mat-icon>
+      <div class="copy">
+        @if (pendientes() > 0) {
+          <p>Hay {{ pendientes() }} registro(s) por enviar al servidor.</p>
+        } @else if (borradores() > 0) {
+          <p>Tienes {{ borradores() }} borrador(es). Puedes editarlos y enviarlos desde Mis registros.</p>
+        }
+      </div>
+      @if (pendientes() > 0) {
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="sincronizar()"
+          [disabled]="!online() || syncing()"
+        >
+          Sync
+        </button>
+      }
+    </div>
+  }
+
+  <button type="button" class="eco-mod-card nuevo" (click)="ir('/terreno/nuevo')">
+    <div class="icon-box"><mat-icon>add_circle_outline</mat-icon></div>
+    <div class="copy">
+      <strong>Nuevo registro</strong>
+      <span>Completar formulario con voz y fotos</span>
+    </div>
+    <mat-icon class="chevron">arrow_forward_ios</mat-icon>
+  </button>
+
+  <button type="button" class="eco-mod-card servicios" (click)="ir('/terreno/servicios')">
+    <div class="icon-box"><mat-icon>assignment_turned_in</mat-icon></div>
+    <div class="copy">
+      <strong>Mis servicios</strong>
+      <span>Agrega levantamientos a los servicios que tienes asignados</span>
+    </div>
+    <mat-icon class="chevron">arrow_forward_ios</mat-icon>
+  </button>
+
+  <button type="button" class="eco-mod-card registros" (click)="ir('/terreno/registros')">
+    <div class="icon-box"><mat-icon>folder_open</mat-icon></div>
+    <div class="copy">
+      <strong>Mis registros</strong>
+      <span>Consulta tus visitas registradas</span>
+    </div>
+    <mat-icon class="chevron">arrow_forward_ios</mat-icon>
+  </button>
+</main>

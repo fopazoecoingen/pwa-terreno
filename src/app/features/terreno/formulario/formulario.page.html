@@ -1,0 +1,111 @@
+<mat-toolbar class="topbar eco-topbar">
+  <button mat-icon-button type="button" (click)="volver()"><mat-icon>arrow_back</mat-icon></button>
+  <img class="eco-isotipo" src="assets/isotipo_ecoingen.png" alt="Ecoingen" />
+  <span>{{ localId() ? 'Editar borrador' : 'Nuevo registro' }}</span>
+  <span class="spacer"></span>
+  <span class="net-pill" [class.off]="!online()">{{ online() ? 'En línea' : 'Offline' }}</span>
+</mat-toolbar>
+
+<form class="page" [formGroup]="form" (ngSubmit)="enviar()">
+  @if (!online()) {
+    <div class="offline-banner">
+      <mat-icon>cloud_off</mat-icon>
+      <span>Puedes guardar y encolar el envío. Se sincroniza al recuperar internet.</span>
+    </div>
+  }
+
+  @if (servicioPreseleccionado(); as svc) {
+    <div class="svc-banner">
+      <mat-icon>assignment</mat-icon>
+      <div>
+        <strong>{{ etiqueta(svc) }}</strong>
+        <span>{{ svc.tipoContrato }} · {{ svc.anyo }}</span>
+      </div>
+    </div>
+  }
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Nombre del terreno / visita</mat-label>
+    <input matInput formControlName="nombreTerreno" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Tipo de lugar</mat-label>
+    <mat-select formControlName="descripcion">
+      @for (t of tipos; track t) {
+        <mat-option [value]="t">{{ t }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Servicio (opcional)</mat-label>
+    <mat-select formControlName="servicioEcoingenId">
+      <mat-option [value]="0">Sin servicio</mat-option>
+      @for (s of servicios(); track s.id) {
+        <mat-option [value]="s.id">{{ etiqueta(s) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full">
+    <mat-label>Observación</mat-label>
+    <textarea matInput rows="4" formControlName="observacion"></textarea>
+  </mat-form-field>
+
+  <div class="fotos-block">
+    <div class="fotos-header">
+      <strong>Fotos</strong>
+      <label class="btn-add">
+        <mat-icon>photo_camera</mat-icon>
+        Agregar
+        <input type="file" accept="image/*" capture="environment" multiple hidden (change)="onFilesSelected($event)" />
+      </label>
+      <label class="btn-add galeria">
+        <mat-icon>photo_library</mat-icon>
+        Galería
+        <input type="file" accept="image/*" multiple hidden (change)="onFilesSelected($event)" />
+      </label>
+    </div>
+
+    @if (fotos().length === 0) {
+      <p class="hint">Las fotos también quedan en el teléfono hasta sincronizar.</p>
+    } @else {
+      <div class="grid">
+        @for (f of fotos(); track f.previewUrl; let i = $index) {
+          <div class="thumb">
+            <img [src]="f.previewUrl" [alt]="f.file.name" />
+            <button mat-icon-button type="button" (click)="quitarFoto(i)" aria-label="Quitar">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="actions">
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="guardarBorrador()"
+      [disabled]="guardando() || enviando()"
+    >
+      @if (guardando()) {
+        <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+        <mat-icon>save</mat-icon>
+      }
+      Guardar borrador
+    </button>
+
+    <button mat-flat-button color="primary" class="btn-enviar" type="submit" [disabled]="enviando() || guardando()">
+      @if (enviando()) {
+        <mat-spinner diameter="20"></mat-spinner>
+      } @else {
+        <mat-icon>{{ online() ? 'cloud_upload' : 'schedule_send' }}</mat-icon>
+      }
+      {{ online() ? 'Enviar registro' : 'Encolar envío' }}
+    </button>
+  </div>
+</form>

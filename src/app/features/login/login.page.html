@@ -1,0 +1,64 @@
+<div class="login-shell">
+  <form class="login-wrap" [formGroup]="form" (ngSubmit)="enviar()">
+    <img
+      class="eco-logo-full"
+      src="assets/logo_ecoingen.png"
+      alt="Ecoingen Ingeniería & Desarrollo"
+    />
+
+    <h1>Bienvenido</h1>
+
+    @if (!online()) {
+      <div class="banner offline">
+        <mat-icon>cloud_off</mat-icon>
+        <div>
+          <strong>Sin conexión</strong>
+          <p>Puedes usar borradores locales si ya iniciaste sesión antes en este equipo.</p>
+        </div>
+      </div>
+    } @else {
+      <div class="banner online">
+        <mat-icon>wifi</mat-icon>
+        <span>Conectado · listo para iniciar sesión</span>
+      </div>
+    }
+
+    <div class="login-card">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Usuario</mat-label>
+        <input matInput formControlName="usuario" autocomplete="username" placeholder="Tu usuario" />
+        <mat-icon matPrefix>person_outline</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Contraseña</mat-label>
+        <input
+          matInput
+          formControlName="password"
+          [type]="mostrarPassword() ? 'text' : 'password'"
+          autocomplete="current-password"
+          placeholder="Tu contraseña"
+        />
+        <mat-icon matPrefix>lock_outline</mat-icon>
+        <button
+          mat-icon-button
+          matSuffix
+          type="button"
+          (click)="mostrarPassword.set(!mostrarPassword())"
+        >
+          <mat-icon>{{ mostrarPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-checkbox formControlName="recordar" color="primary">Recordar usuario</mat-checkbox>
+
+      <button mat-flat-button class="btn-login" type="submit" [disabled]="cargando()">
+        @if (cargando()) {
+          <mat-spinner diameter="22"></mat-spinner>
+        } @else {
+          Iniciar sesión
+        }
+      </button>
+    </div>
+  </form>
+</div>
