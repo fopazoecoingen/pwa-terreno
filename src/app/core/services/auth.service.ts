@@ -32,24 +32,34 @@ export class AuthService {
   private mapearLogin(raw: Record<string, unknown>, usuario: string): SesionUsuario {
     const data = (raw['data'] ?? raw['result'] ?? raw) as Record<string, unknown>;
     const token = String(
-      data['token'] ??
-        data['Token'] ??
-        data['accessToken'] ??
+      data['accessToken'] ??
         data['AccessToken'] ??
+        data['token'] ??
+        data['Token'] ??
         data['access_token'] ??
         '',
     ).trim();
     if (!token) throw new Error('No se recibió token de autenticación.');
 
+    // SSO no devuelve usuarioId en el body; el JWT trae claim "Id".
     const usuarioId =
-      Number(data['usuarioId'] ?? data['UsuarioId'] ?? data['idUsuario'] ?? 0) ||
-      this.session.usuarioIdDesdeToken(token);
+      Number(
+        data['usuarioId'] ??
+          data['UsuarioId'] ??
+          data['idUsuario'] ??
+          data['IdUsuario'] ??
+          data['id'] ??
+          data['Id'] ??
+          0,
+      ) || this.session.usuarioIdDesdeToken(token);
 
     return {
       token,
-      usuario,
+      usuario: String(data['usuario'] ?? data['Usuario'] ?? usuario).trim() || usuario,
       usuarioId,
-      esSuperAdmin: !!(data['esSuperAdmin'] ?? data['EsSuperAdmin']),
+      esSuperAdmin:
+        !!(data['esSuperAdmin'] ?? data['EsSuperAdmin']) ||
+        String(data['rol'] ?? data['Rol'] ?? '').toLowerCase() === 'superadmin',
       empresas: this.session.normalizarEmpresas(
         data['listaEmpresas'] ?? data['ListaEmpresas'] ?? data['empresas'],
       ),

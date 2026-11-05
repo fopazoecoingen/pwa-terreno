@@ -14,12 +14,25 @@ export class SessionService {
   readonly sesion = this._sesion.asReadonly();
   readonly autenticado = computed(() => !!this._sesion()?.token);
   readonly token = computed(() => this._sesion()?.token ?? '');
-  readonly usuarioId = computed(() => this._sesion()?.usuarioId ?? 0);
+  readonly usuarioId = computed(() => {
+    const s = this._sesion();
+    if (!s) return 0;
+    if (s.usuarioId > 0) return s.usuarioId;
+    // Sesiones antiguas / login sin Id en body: el JWT Ecoingen usa claim "Id".
+    return this.usuarioIdDesdeToken(s.token);
+  });
   readonly usuario = computed(() => this._sesion()?.usuario ?? '');
 
   setSesion(sesion: SesionUsuario): void {
-    localStorage.setItem(KEY, JSON.stringify(sesion));
-    this._sesion.set(sesion);
+    const normalizada: SesionUsuario = {
+      ...sesion,
+      usuarioId:
+        sesion.usuarioId > 0
+          ? sesion.usuarioId
+          : this.usuarioIdDesdeToken(sesion.token),
+    };
+    localStorage.setItem(KEY, JSON.stringify(normalizada));
+    this._sesion.set(normalizada);
   }
 
   clear(): void {
@@ -50,7 +63,10 @@ export class SessionService {
   usuarioIdDesdeToken(token: string): number {
     try {
       const payload = jwtDecode<Record<string, unknown>>(token);
+      // API TokenGenerator: Claim("Id", usuario.Id) — igual que app-terreno Flutter.
       const candidates = [
+        payload['Id'],
+        payload['id'],
         payload['nameid'],
         payload['sub'],
         payload['uid'],
@@ -85,6 +101,12 @@ export class SessionService {
       if (!raw) return null;
       const parsed = JSON.parse(raw) as SesionUsuario;
       if (!parsed?.token) return null;
+      if (!(parsed.usuarioId > 0)) {
+        parsed.usuarioId = this.usuarioIdDesdeToken(parsed.token);
+        if (parsed.usuarioId > 0) {
+          localStorage.setItem(KEY, JSON.stringify(parsed));
+        }
+      }
       return parsed;
     } catch {
       return null;
