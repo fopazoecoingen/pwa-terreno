@@ -7,9 +7,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = session.token().trim();
   if (!token) return next(req);
 
-  // Storage acepta Bearer en Azure; el resto de endpoints también.
-  const authReq = req.clone({
-    setHeaders: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, '')}` },
-  });
-  return next(authReq);
+  let headers = req.headers.set(
+    'Authorization',
+    `Bearer ${token.replace(/^Bearer\s+/i, '')}`,
+  );
+
+  // Con FormData el browser debe poner el boundary; si queda un Content-Type
+  // fijo, ASP.NET no bindea IFormFile y responde "No se recibió ningún archivo".
+  if (typeof FormData !== 'undefined' && req.body instanceof FormData && headers.has('Content-Type')) {
+    headers = headers.delete('Content-Type');
+  }
+
+  return next(req.clone({ headers }));
 };

@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, from, map } from 'rxjs';
 import { API } from '../config/api.config';
+import { SessionService } from './session.service';
 import {
   ImagenTerreno,
   RegistroTerreno,
@@ -11,10 +12,12 @@ import {
   mapRegistro,
   mapServicio,
 } from '../models/terreno.model';
+import { blobAFile, normalizarNombreFoto } from '../utils/foto-blob';
 
 @Injectable({ providedIn: 'root' })
 export class TerrenoApiService {
   private readonly http = inject(HttpClient);
+  private readonly session = inject(SessionService);
 
   listarRegistros(): Observable<RegistroTerreno[]> {
     return this.http.get<unknown>(API.registroListar()).pipe(
@@ -74,39 +77,77 @@ export class TerrenoApiService {
   }
 
   /**
-   * Sube imagen al blob. Usa Blob + nombre (no `File`) para evitar fallos en Safari/iOS.
+   * Subida vía fetch (no HttpClient): en iOS/Safari el multipart con Blobs de IndexedDB
+   * a menudo llega vacío al API ("No se recibió ningún archivo").
    */
   subirImagen(blob: Blob, subcarpeta: string, nombreArchivo?: string): Observable<string> {
-    const nombre = this.normalizarNombreFoto(nombreArchivo, blob.type);
-    const form = new FormData();
-    // Safari/iOS: append Blob directo; `new File([...])` a veces rompe el multipart.
-    form.append('file', blob, nombre);
-    return this.http.post<unknown>(API.uploadImagenTerreno(subcarpeta), form).pipe(
-      map((raw) => {
-        const o = (raw ?? {}) as Record<string, unknown>;
-        const uri = String(
-          o['uri'] ??
-            o['Uri'] ??
-            o['url'] ??
-            o['Url'] ??
-            o['blobUri'] ??
-            o['BlobUri'] ??
-            (o['blob'] as Record<string, unknown> | undefined)?.['uri'] ??
-            (o['Blob'] as Record<string, unknown> | undefined)?.['Uri'] ??
-            '',
-        ).trim();
-        return uri;
-      }),
-    );
+    return from(this.subirImagenFetch(blob, subcarpeta, nombreArchivo));
   }
 
-  private normalizarNombreFoto(nombre: string | undefined, mime: string): string {
-    const base = (nombre || 'foto.jpg').trim() || 'foto.jpg';
-    if (/\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(base)) return base;
-    if (mime.includes('png')) return `${base}.png`;
-    if (mime.includes('webp')) return `${base}.webp`;
-    if (mime.includes('heic') || mime.includes('heif')) return `${base}.heic`;
-    return `${base}.jpg`;
+  private async subirImagenFetch(
+    blob: Blob,
+    subcarpeta: string,
+    nombreArchivo?: string,
+  ): Promise<string> {
+    const file = await blobAFile(blob, nombreArchivo || 'foto.jpg', blob.type);
+    if (!file.size) {
+      throw new Error('La foto quedó vacía al preparar el envío. Vuelve a seleccionarla.');
+    }
+
+    const form = new FormData();
+    form.append('file', file, file.name || normalizarNombreFoto(nombreArchivo, file.type));
+
+    const token = this.session.token().replace(/^Bearer\s+/i, '').trim();
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // No setear Content-Type: el browser pone multipart boundary.
+
+    const res = await fetch(API.uploadImagenTerreno(subcarpeta), {
+      method: 'POST',
+      headers,
+      body: form,
+      credentials: 'omit',
+    });
+
+    const text = await res.text();
+    let raw: unknown = null;
+    if (text) {
+      try {
+        raw = JSON.parse(text);
+      } catch {
+        raw = text;
+      }
+    }
+
+    if (!res.ok) {
+      const msg =
+        typeof raw === 'string'
+          ? raw
+          : String(
+              (raw as Record<string, unknown>)?.['message'] ??
+                (raw as Record<string, unknown>)?.['Message'] ??
+                (raw as Record<string, unknown>)?.['status'] ??
+                text ??
+                res.statusText,
+            );
+      throw Object.assign(new Error(msg || `Error al subir imagen (HTTP ${res.status})`), {
+        status: res.status,
+        error: raw,
+      });
+    }
+
+    const o = (raw ?? {}) as Record<string, unknown>;
+    return String(
+      o['uri'] ??
+        o['Uri'] ??
+        o['url'] ??
+        o['Url'] ??
+        o['blobUri'] ??
+        o['BlobUri'] ??
+        (o['blob'] as Record<string, unknown> | undefined)?.['uri'] ??
+        (o['Blob'] as Record<string, unknown> | undefined)?.['Uri'] ??
+        '',
+    ).trim();
   }
 
   descargarInforme(id: number): Observable<Blob> {

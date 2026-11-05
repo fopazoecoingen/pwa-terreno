@@ -19,6 +19,7 @@ import { ServicioTerreno, etiquetaServicio } from '../../../core/models/terreno.
 import type { RegistroLocal } from '../../../core/models/offline-registro.model';
 import { subcarpetaBlobParaRegistro } from '../../../core/utils/terreno-paths';
 import { mensajeErrorHttp } from '../../../core/utils/http-error';
+import { materializarBlob } from '../../../core/utils/foto-blob';
 
 interface FotoPendiente {
   file: File;
@@ -281,15 +282,21 @@ export class FormularioPage implements OnInit {
     };
 
     await this.store.guardarRegistro(registro);
-    await this.store.reemplazarFotos(
-      id,
-      this.fotos().map((f, orden) => ({
-        nombre: f.file.name || `foto_${orden + 1}.jpg`,
-        mimeType: f.file.type || 'image/jpeg',
-        blob: f.file,
-        orden,
-      })),
+
+    // Materializar bytes YA: en iOS el File de la cámara se “vacía” si se guarda crudo en IndexedDB.
+    const fotosMaterializadas = await Promise.all(
+      this.fotos().map(async (f, orden) => {
+        const mime = f.file.type || 'image/jpeg';
+        const blob = await materializarBlob(f.file, mime);
+        return {
+          nombre: f.file.name || `foto_${orden + 1}.jpg`,
+          mimeType: mime,
+          blob,
+          orden,
+        };
+      }),
     );
+    await this.store.reemplazarFotos(id, fotosMaterializadas);
     return registro;
   }
 }

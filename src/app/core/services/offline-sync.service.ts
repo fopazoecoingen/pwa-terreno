@@ -105,7 +105,16 @@ export class OfflineSyncService {
     let subidas = 0;
     try {
       for (const foto of fotosValidas) {
-        await firstValueFrom(this.api.subirImagen(foto.blob, working.blobStorage, foto.nombre));
+        // Releer bytes frescos por si el Blob de IDB quedó “hueco” en Safari.
+        const mime = foto.mimeType || foto.blob.type || 'image/jpeg';
+        const buffer = await foto.blob.arrayBuffer();
+        if (!buffer.byteLength) {
+          throw new Error(
+            `La foto «${foto.nombre}» está vacía en el teléfono. Ábrela, quítala, vuelve a agregarla y sincroniza.`,
+          );
+        }
+        const fresco = new Blob([buffer], { type: mime });
+        await firstValueFrom(this.api.subirImagen(fresco, working.blobStorage, foto.nombre));
         subidas += 1;
       }
     } catch (err) {
